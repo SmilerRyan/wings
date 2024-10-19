@@ -3,8 +3,10 @@ package filesystem
 import (
 	"sync"
 	"sync/atomic"
-	"syscall"
+	// "syscall"
 	"time"
+	"runtime"
+	"os"
 
 	"emperror.dev/errors"
 	"github.com/apex/log"
@@ -164,7 +166,6 @@ func (fs *Filesystem) DirectorySize(dir string) (int64, error) {
 	}
 
 	var size int64
-	var st syscall.Stat_t
 
 	err = godirwalk.Walk(d, &godirwalk.Options{
 		Unsorted: true,
@@ -183,8 +184,17 @@ func (fs *Filesystem) DirectorySize(dir string) (int64, error) {
 			}
 
 			if !e.IsDir() {
-				syscall.Lstat(p, &st)
-				atomic.AddInt64(&size, st.Size)
+				if runtime.GOOS != "windows" {
+					// var st syscall.Stat_t
+					// syscall.Lstat(p, &st)
+					// atomic.AddInt64(&size, st.Size)
+				} else {
+					st, err := os.Stat(p)
+					if err != nil {
+						return err
+					}
+					atomic.AddInt64(&size, st.Size())
+				}
 			}
 
 			return nil

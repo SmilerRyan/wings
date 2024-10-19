@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"runtime"
 
 	"github.com/NYTimes/logrotate"
 	"github.com/apex/log"
@@ -124,8 +125,10 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 		return
 	}
 	log.WithField("username", config.Get().System.User).Info("checking for pterodactyl system user")
-	if err := config.EnsurePterodactylUser(); err != nil {
-		log.WithField("error", err).Fatal("failed to create pterodactyl system user")
+	if runtime.GOOS != "windows" {
+		if err := config.EnsurePterodactylUser(); err != nil {
+			log.WithField("error", err).Fatal("failed to create pterodactyl system user")
+		}
 	}
 	log.WithFields(log.Fields{
 		"username": config.Get().System.Username,

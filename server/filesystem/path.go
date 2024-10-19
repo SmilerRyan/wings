@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"runtime"
 
 	"emperror.dev/errors"
 	"golang.org/x/sync/errgroup"
@@ -106,6 +107,9 @@ func (fs *Filesystem) unsafeFilePath(p string) string {
 // validate that the rest of the path does not end up resolving out of this directory, or that the
 // targeted file or folder is not a symlink doing the same thing.
 func (fs *Filesystem) unsafeIsInDataDirectory(p string) bool {
+	if runtime.GOOS == "windows" {
+		return strings.HasPrefix(strings.TrimSuffix(p, "\\")+"\\", strings.TrimSuffix(fs.Path(), "\\")+"\\")
+	}
 	return strings.HasPrefix(strings.TrimSuffix(p, "/")+"/", strings.TrimSuffix(fs.Path(), "/")+"/")
 }
 

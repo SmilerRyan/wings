@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -235,6 +236,9 @@ func (fs *Filesystem) Chown(path string) error {
 	uid := config.Get().System.User.Uid
 	gid := config.Get().System.User.Gid
 
+	if runtime.GOOS == "windows" {
+		return nil
+	}
 	// Start by just chowning the initial path that we received.
 	if err := os.Chown(cleaned, uid, gid); err != nil {
 		return errors.Wrap(err, "server/filesystem: chown: failed to chown path")
