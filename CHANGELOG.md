@@ -1,5 +1,50 @@
 # Changelog
 
+## v1.11.4
+### Fixed
+* CVE-2023-25168
+
+## v1.11.3
+### Fixed
+* CVE-2023-25152
+
+## v1.11.2
+### Fixed
+* Backups being restored from remote storage (s3) erroring out due to a closed stream.
+* Fix IP validation logic for activity logs filtering out valid IPs instead of invalid IPs
+
+## v1.11.1
+### Changed
+* Release binaries are now built with Go 1.18.10
+* Timeout when stopping a server before a transfer begins has been reduced to 15 seconds from 1 minute
+* Removed insecure SSH protocols for use with the SFTP server
+
+### Fixed
+* Unnecessary Docker client connections being left open, causing a slow leak of file descriptors
+* Files being left open in parts of the server's filesystem, causing a leak of file descriptors
+* IPv6 addresses being corrupted by flawed port stripping logic for activity logs, old entries with malformed IPs will be deleted from the local SQLite database automatically
+* A server that times out while being stopped at the beginning of a transfer no longer causes the server to become stuck in a transferring state
+
+## v1.11.0
+### Added (since 1.7.2)
+* More detailed information returned by the `/api/system` endpoint when using the `?v=2` query parameter.
+
+### Changed (since 1.7.2)
+* Send re-installation status separately from installation status.
+* Wings release versions will now follow the major and minor version of the Panel.
+* Transfers no longer buffer to disk, instead they are fully streamed with only a small amount of memory used for buffering.
+* Release binaries are no longer compressed with UPX.
+* Use `POST` instead of `GET` for sending the status of a transfer to the Panel.
+
+### Fixed (since 1.7.2)
+* Fixed servers outgoing IP not being updated whenever a server's primary allocation is changed when using the Force Outgoing IP option.
+* Fixed servers being terminated rather than gracefully stopped when a signal is used to stop the container rather than a command.
+* Fixed file not found errors being treated as an internal error, they are now treated as a 404.
+* Wings can be run with Podman instead of Docker, this is still experimental and not recommended for production use.
+* Archive progress is now reported correctly.
+* Labels for containers can now be set by the Panel.
+* Fixed servers becoming deadlocked when the target node of a transfer goes offline.
+
 ## v1.11.0-rc.2
 ### Added
 * More detailed information returned by the `/api/system` endpoint when using the `?v=2` query parameter.
@@ -22,6 +67,14 @@
 * Wings can be run with podman instead of Docker, this is still experimental and not recommended for production use.
 * Archive progress is now reported correctly.
 * Labels for containers can now be set by the Panel.
+
+## v1.7.4
+### Fixed
+* CVE-2023-25168
+
+## v1.7.3
+### Fixed
+* CVE-2023-25152
 
 ## v1.7.2
 ### Fixed
