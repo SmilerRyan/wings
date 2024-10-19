@@ -1,6 +1,6 @@
 # Windows Windows Undo Guide
 
-## Release v1.5.0 to v1.6.0
+## Release v1.5.0 to v1.6.1
 
 No changes are needed to undo.
 
