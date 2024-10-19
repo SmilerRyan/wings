@@ -48,10 +48,12 @@ var DefaultTLSConfig = &tls.Config{
 	CurvePreferences:         []tls.CurveID{tls.X25519, tls.CurveP256},
 }
 
-var mu sync.RWMutex
-var _config *Configuration
-var _jwtAlgo *jwt.HMACSHA
-var _debugViaFlag bool
+var (
+	mu            sync.RWMutex
+	_config       *Configuration
+	_jwtAlgo      *jwt.HMACSHA
+	_debugViaFlag bool
+)
 
 // Locker specific to writing the configuration to the disk, this happens
 // in areas that might already be locked, so we don't want to crash the process.
@@ -181,6 +183,9 @@ type SystemConfiguration struct {
 }
 
 type CrashDetection struct {
+	// CrashDetectionEnabled sets if crash detection is enabled globally for all servers on this node.
+	CrashDetectionEnabled bool `default:"true" yaml:"enabled"`
+
 	// Determines if Wings should detect a server that stops with a normal exit code of
 	// "0" as being crashed if the process stopped without any Wings interaction. E.g.
 	// the user did not press the stop button, but the process stopped cleanly.
@@ -375,7 +380,7 @@ func WriteToDisk(c *Configuration) error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(c.path, b, 0600); err != nil {
+	if err := ioutil.WriteFile(c.path, b, 0o600); err != nil {
 		return err
 	}
 	return nil
@@ -452,9 +457,22 @@ func FromFile(path string) error {
 		return err
 	}
 	// Replace environment variables within the configuration file with their
-	// values from the host system.
-	b = []byte(os.ExpandEnv(string(b)))
-	if err := yaml.Unmarshal(b, c); err != nil {
+	// values from the host system. This function works almost identically to
+	// the default os.ExpandEnv function, except it supports escaping dollar
+	// signs in the text if you pass "$$" through.
+	//
+	// "some$$foo" -> "some$foo"
+	// "some$foo" -> "some" (or "someVALUE_OF_FOO" if FOO is defined in env)
+	//
+	// @see https://github.com/pterodactyl/panel/issues/3692
+	exp := os.Expand(string(b), func(s string) string {
+		if s == "$" {
+			return s
+		}
+		return os.Getenv(s)
+	})
+
+	if err := yaml.Unmarshal([]byte(exp), c); err != nil {
 		return err
 	}
 	// Store this configuration in the global state.
@@ -470,7 +488,7 @@ func FromFile(path string) error {
 func ConfigureDirectories() error {
 	root := _config.System.RootDirectory
 	log.WithField("path", root).Debug("ensuring root data directory exists")
-	if err := os.MkdirAll(root, 0700); err != nil {
+	if err := os.MkdirAll(root, 0o700); err != nil {
 		return err
 	}
 
@@ -491,17 +509,17 @@ func ConfigureDirectories() error {
 	}
 
 	log.WithField("path", _config.System.Data).Debug("ensuring server data directory exists")
-	if err := os.MkdirAll(_config.System.Data, 0700); err != nil {
+	if err := os.MkdirAll(_config.System.Data, 0o700); err != nil {
 		return err
 	}
 
 	log.WithField("path", _config.System.ArchiveDirectory).Debug("ensuring archive data directory exists")
-	if err := os.MkdirAll(_config.System.ArchiveDirectory, 0700); err != nil {
+	if err := os.MkdirAll(_config.System.ArchiveDirectory, 0o700); err != nil {
 		return err
 	}
 
 	log.WithField("path", _config.System.BackupDirectory).Debug("ensuring backup data directory exists")
-	if err := os.MkdirAll(_config.System.BackupDirectory, 0700); err != nil {
+	if err := os.MkdirAll(_config.System.BackupDirectory, 0o700); err != nil {
 		return err
 	}
 
