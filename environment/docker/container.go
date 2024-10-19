@@ -175,7 +175,7 @@ func (e *Environment) Create() error {
 	conf := &container.Config{
 		Hostname:     e.Id,
 		Domainname:   config.Get().Docker.Domainname,
-		User:         strconv.Itoa(config.Get().System.User.Uid),
+		User:         strconv.Itoa(config.Get().System.User.Uid) + ":" + strconv.Itoa(config.Get().System.User.Gid),
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
@@ -342,10 +342,10 @@ func (e *Environment) followOutput() error {
 func (e *Environment) scanOutput(reader io.ReadCloser) {
 	defer reader.Close()
 
-	events := e.Events()
-
-	if err := system.ScanReader(reader, func(line string) {
-		events.Publish(environment.ConsoleOutputEvent, line)
+	if err := system.ScanReader(reader, func(v []byte) {
+		e.logCallbackMx.Lock()
+		defer e.logCallbackMx.Unlock()
+		e.logCallback(v)
 	}); err != nil && err != io.EOF {
 		log.WithField("error", err).WithField("container_id", e.Id).Warn("error processing scanner line in console output")
 		return

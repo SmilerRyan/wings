@@ -86,7 +86,7 @@ func (fs *Filesystem) Touch(p string, flag int) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	f, err := os.OpenFile(cleaned, flag, 0644)
+	f, err := os.OpenFile(cleaned, flag, 0o644)
 	if err == nil {
 		return f, nil
 	}
@@ -98,7 +98,7 @@ func (fs *Filesystem) Touch(p string, flag int) (*os.File, error) {
 	if _, err := os.Stat(filepath.Dir(cleaned)); errors.Is(err, os.ErrNotExist) {
 		// Create the path leading up to the file we're trying to create, setting the final perms
 		// on it as we go.
-		if err := os.MkdirAll(filepath.Dir(cleaned), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(cleaned), 0o755); err != nil {
 			return nil, errors.Wrap(err, "server/filesystem: touch: failed to create directory tree")
 		}
 		if err := fs.Chown(filepath.Dir(cleaned)); err != nil {
@@ -108,7 +108,7 @@ func (fs *Filesystem) Touch(p string, flag int) (*os.File, error) {
 	o := &fileOpener{}
 	// Try to open the file now that we have created the pathing necessary for it, and then
 	// Chown that file so that the permissions don't mess with things.
-	f, err = o.open(cleaned, flag, 0644)
+	f, err = o.open(cleaned, flag, 0o644)
 	if err != nil {
 		return nil, errors.Wrap(err, "server/filesystem: touch: failed to open file with wait")
 	}
@@ -182,7 +182,7 @@ func (fs *Filesystem) CreateDirectory(name string, p string) error {
 	if err != nil {
 		return err
 	}
-	return os.MkdirAll(cleaned, 0755)
+	return os.MkdirAll(cleaned, 0o755)
 }
 
 // Moves (or renames) a file or directory.
@@ -211,7 +211,7 @@ func (fs *Filesystem) Rename(from string, to string) error {
 	// Ensure that the directory we're moving into exists correctly on the system. Only do this if
 	// we're not at the root directory level.
 	if d != fs.Path() {
-		if mkerr := os.MkdirAll(d, 0755); mkerr != nil {
+		if mkerr := os.MkdirAll(d, 0o755); mkerr != nil {
 			return errors.WithMessage(mkerr, "failed to create directory structure for file rename")
 		}
 	}
@@ -381,7 +381,7 @@ func (fs *Filesystem) TruncateRootDirectory() error {
 	if err := os.RemoveAll(fs.Path()); err != nil {
 		return err
 	}
-	if err := os.Mkdir(fs.Path(), 0755); err != nil {
+	if err := os.Mkdir(fs.Path(), 0o755); err != nil {
 		return err
 	}
 	atomic.StoreInt64(&fs.diskUsed, 0)
@@ -489,7 +489,7 @@ func (fs *Filesystem) ListDirectory(p string) ([]Stat, error) {
 			defer wg.Done()
 
 			var m *mimetype.MIME
-			var d = "inode/directory"
+			d := "inode/directory"
 			if !f.IsDir() {
 				cleanedp := filepath.Join(cleaned, f.Name())
 				if f.Mode()&os.ModeSymlink != 0 {

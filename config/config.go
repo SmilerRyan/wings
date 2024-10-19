@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/user"
@@ -287,6 +286,12 @@ type Configuration struct {
 	// The Panel URL is automatically allowed, this is only needed for adding
 	// additional origins.
 	AllowedOrigins []string `json:"allowed_origins" yaml:"allowed_origins"`
+
+	// AllowCORSPrivateNetwork sets the `Access-Control-Request-Private-Network` header which
+	// allows client browsers to make requests to internal IP addresses over HTTP.  This setting
+	// is only required by users running Wings without SSL certificates and using internal IP
+	// addresses in order to connect. Most users should NOT enable this setting.
+	AllowCORSPrivateNetwork bool `json:"allow_cors_private_network" yaml:"allow_cors_private_network"`
 }
 
 // NewAtPath creates a new struct and set the path where it should be stored.
@@ -380,7 +385,7 @@ func WriteToDisk(c *Configuration) error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(c.path, b, 0o600); err != nil {
+	if err := os.WriteFile(c.path, b, 0o600); err != nil {
 		return err
 	}
 	return nil
@@ -448,7 +453,7 @@ func EnsurePterodactylUser() error {
 // FromFile reads the configuration from the provided file and stores it in the
 // global singleton for this instance.
 func FromFile(path string) error {
-	b, err := ioutil.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
@@ -456,31 +461,17 @@ func FromFile(path string) error {
 	if err != nil {
 		return err
 	}
-	// Replace environment variables within the configuration file with their
-	// values from the host system. This function works almost identically to
-	// the default os.ExpandEnv function, except it supports escaping dollar
-	// signs in the text if you pass "$$" through.
-	//
-	// "some$$foo" -> "some$foo"
-	// "some$foo" -> "some" (or "someVALUE_OF_FOO" if FOO is defined in env)
-	//
-	// @see https://github.com/pterodactyl/panel/issues/3692
-	exp := os.Expand(string(b), func(s string) string {
-		if s == "$" {
-			return s
-		}
-		return os.Getenv(s)
-	})
 
-	if err := yaml.Unmarshal([]byte(exp), c); err != nil {
+	if err := yaml.Unmarshal(b, c); err != nil {
 		return err
 	}
+
 	// Store this configuration in the global state.
 	Set(c)
 	return nil
 }
 
-// ConfigureDirectories ensures that all of the system directories exist on the
+// ConfigureDirectories ensures that all the system directories exist on the
 // system. These directories are created so that only the owner can read the data,
 // and no other users.
 //
@@ -592,7 +583,7 @@ func ConfigureTimezone() error {
 		_config.System.Timezone = tz
 	}
 	if _config.System.Timezone == "" {
-		b, err := ioutil.ReadFile("/etc/timezone")
+		b, err := os.ReadFile("/etc/timezone")
 		if err != nil {
 			if !os.IsNotExist(err) {
 				return errors.WithMessage(err, "config: failed to open timezone file")
