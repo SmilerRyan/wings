@@ -83,7 +83,7 @@ func (s *Server) processConsoleOutputEvent(v []byte) {
 
 	// If we are not throttled, go ahead and output the data.
 	if !t.Throttled() {
-		s.LogSink().Push(v)
+		s.Sink(LogSink).Push(v)
 	}
 
 	// Also pass the data along to the console output channel.
@@ -125,7 +125,7 @@ func (s *Server) StartEventListeners() {
 						l.Trigger()
 					}
 
-					s.emitProcUsage()
+					s.Events().Publish(StatsEvent, s.Proc())
 				}()
 			case e := <-docker:
 				go func() {
