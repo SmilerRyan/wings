@@ -1,6 +1,6 @@
 # Windows Windows Undo Guide
 
-## Release v1.5.0 to v1.6.4
+## Release v1.5.0 to Last commit on July 10th 2022
 
 No changes are needed to undo.
 

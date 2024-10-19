@@ -5,6 +5,8 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/pterodactyl/wings/internal/cron"
+	"github.com/pterodactyl/wings/internal/sqlite"
 	log2 "log"
 	"net/http"
 	_ "net/http/pprof"
@@ -131,6 +133,10 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 			Timeout: time.Second * time.Duration(config.Get().RemoteQuery.Timeout),
 		}),
 	)
+
+	if err := sqlite.Initialize(cmd.Context()); err != nil {
+		log.WithField("error", err).Fatal("failed to initialize database")
+	}
 
 	manager, err := server.NewManager(cmd.Context(), pclient)
 	if err != nil {
@@ -260,6 +266,13 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 			s.CtxCancel()
 		}
 	}()
+
+	if s, err := cron.Scheduler(cmd.Context(), manager); err != nil {
+		log.WithField("error", err).Fatal("failed to initialize cron system")
+	} else {
+		log.WithField("subsystem", "cron").Info("starting cron processes")
+		s.StartAsync()
+	}
 
 	go func() {
 		// Run the SFTP server.
